@@ -1,0 +1,70 @@
+version: '3'
+
+volumes:
+  pg:
+  tiddly:
+  gogs:
+
+services:
+  tiddlywiki:
+    image: mazzolino/tiddlywiki
+    ports:
+      - "8000:8080"
+    volumes:
+      - tiddly:/var/lib/tiddlywiki
+    environment:
+      - USERNAME=${TIDDLY_USERNAME}
+      - PASSWORD=${TIDDLY_PASSWORD}
+    labels:
+      - traefik.enable=true
+      - traefik.backend=tiddlywiki
+      - traefik.frontend.rule=Host:wiki.adolfosilva.org
+      - traefik.frontend.entryPoints=https,http
+      - traefik.port=8000
+
+  gogs:
+    image: gogs/gogs
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    ports:
+      - "10022:22"
+      - "3000:3000"
+    volumes:
+      - gogs:/data
+    labels:
+      - traefik.enable=true
+      - traefik.backend=gogs
+      - traefik.frontend.rule=Host:code.adolfosilva.org
+      - traefik.frontend.entryPoints=https,http
+      - traefik.port=3000
+    environment:
+      - ENABLE_GZIP=true
+
+  postgres:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+      - POSTGRES_DB=gogs
+    volumes:
+      - pg:/var/lib/postgresql/data
+    labels:
+      - traefik.enable=false
+      - traefik.backend=postgres
+
+  traefik:
+    build: traefik
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.backend=traefik
+      - traefik.frontend.rule=Host:traefik.adolfosilva.org
+      - traefik.frontend.entryPoints=http,https
+      - traefik.port=8080
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

@@ -1,0 +1,33 @@
+logLevel = "INFO"
+defaultEntryPoints = ["https", "http"]
+
+[web]
+address = ":8080"
+  [web.auth.basic]
+  usersFile = "users.htpasswd"
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+    [entryPoints.http.redirect]
+      entryPoint = "https"
+  [entryPoints.https]
+  address = ":443"
+    [entryPoints.https.tls]
+
+[retry]
+
+[docker]
+endpoint = "unix:///var/run/docker.sock"
+domain = "adolfosilva.org"
+watch = true
+exposedbydefault = false
+
+[acme]
+email = "code@adolfosilva.org"
+storage = "acme.json"
+entryPoint = "https"
+onHostRule = true
+onDemand = false
+  [acme.httpChallenge]
+  entryPoint = "https"
