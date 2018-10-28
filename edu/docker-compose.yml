@@ -1,11 +1,61 @@
 version: '3'
 
 volumes:
-  pg:
+  owncloud:
+  pg-owncloud:
+  redis:
   tiddly:
   gogs:
+  pg-gogs:
 
 services:
+  owncloud:
+    image: owncloud/server:10.0.10
+    depends_on:
+      - pg-owncloud
+      - redis
+    links:
+      - "pg-owncloud:db"
+      - redis
+    ports:
+      - "7000:8080"
+    volumes:
+      - owncloud:/mnt/data
+    environment:
+      - OWNCLOUD_DOMAIN=cloud.adolfosilva.org
+      - OWNCLOUD_DB_TYPE=pgsql
+      - OWNCLOUD_DB_NAME=owncloud
+      - OWNCLOUD_DB_USERNAME=${OWNCLOUD_PG_USERNAME}
+      - OWNCLOUD_DB_PASSWORD=${OWNCLOUD_PG_PASSWORD}
+      - OWNCLOUD_DB_HOST=db
+      - OWNCLOUD_ADMIN_USERNAME=${OWNCLOUD_ADMIN_USERNAME}
+      - OWNCLOUD_ADMIN_PASSWORD=${OWNCLOUD_ADMIN_PASSWORD}
+      - OWNCLOUD_REDIS_ENABLED=true
+      - OWNCLOUD_REDIS_HOST=redis
+    labels:
+      - traefik.enable=true
+      - traefik.backend=owncloud
+      - traefik.frontend.rule=Host:cloud.adolfosilva.org
+      - traefik.frontend.entryPoints=https,http
+      - traefik.port=7000
+
+  pg-owncloud:
+    image: postgres:9.6.10-alpine
+    environment:
+      - POSTGRES_USER=${OWNCLOUD_PG_USERNAME}
+      - POSTGRES_PASSWORD=${OWNCLOUD_PG_PASSWORD}
+    volumes:
+      - pg-owncloud:/var/lib/postgresql/data
+    labels:
+      - traefik.enable=false
+      - traefik.backend=pg-owncloud
+
+  redis:
+    image: redis:5.0.0-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis:/data
+
   tiddlywiki:
     image: mazzolino/tiddlywiki
     ports:
@@ -25,9 +75,9 @@ services:
   gogs:
     image: gogs/gogs
     depends_on:
-      - postgres
+      - pg-gogs
     links:
-      - postgres
+      - "pg-gogs:db"
     ports:
       - "10022:22"
       - "3000:3000"
@@ -42,17 +92,19 @@ services:
     environment:
       - ENABLE_GZIP=true
 
-  postgres:
+  pg-gogs:
     image: postgres:alpine
+    ports:
+      - "5433:5432"
     environment:
-      - POSTGRES_USER=${PG_USER}
-      - POSTGRES_PASSWORD=${PG_PASSWORD}
+      - POSTGRES_USER=${GOGS_PG_USERNAME}
+      - POSTGRES_PASSWORD=${GOGS_PG_PASSWORD}
       - POSTGRES_DB=gogs
     volumes:
-      - pg:/var/lib/postgresql/data
+      - pg-gogs:/var/lib/postgresql/data
     labels:
       - traefik.enable=false
-      - traefik.backend=postgres
+      - traefik.backend=pg-gogs
 
   traefik:
     build: traefik
