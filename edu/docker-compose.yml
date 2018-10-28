@@ -1,6 +1,7 @@
 version: '3'
 
 volumes:
+  backup-cache:
   owncloud:
   pg-owncloud:
   redis:
@@ -120,3 +121,22 @@ services:
       - 443:443
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+  backups:
+    container_name: volumerize
+    image: blacklabelops/volumerize
+    restart: unless-stopped
+    environment:
+        - VOLUMERIZE_SOURCE=/source
+        - VOLUMERIZE_CONTAINERS=edu_tiddlywiki_1
+        - VOLUMERIZE_TARGET=dpbx:///Apps/Volumerize
+        - DPBX_ACCESS_TOKEN=${DROPBOX_ACCESS_TOKEN}
+        - VOLUMERIZE_JOBBER_TIME=0 0 */12 * * *
+        - VOLUMERIZE_FULL_IF_OLDER_THAN=7D
+        - JOB_NAME2=RemoveOldBackups
+        - JOB_COMMAND2=/etc/volumerize/remove-older-than 7D --force
+        - JOB_TIME2=0 0 * * * *
+    volumes:
+        - tiddly:/source/tiddly:ro
+        - backup-cache:/volumerize-cache
+        - /var/run/docker.sock:/var/run/docker.sock
