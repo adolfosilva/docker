@@ -38,7 +38,7 @@ services:
       - traefik.backend=owncloud
       - traefik.frontend.rule=Host:cloud.adolfosilva.org
       - traefik.frontend.entryPoints=https,http
-      - traefik.port=7000
+      - traefik.port=8080
 
   pg-owncloud:
     image: postgres:9.6.10-alpine
@@ -71,7 +71,7 @@ services:
       - traefik.backend=tiddlywiki
       - traefik.frontend.rule=Host:wiki.adolfosilva.org
       - traefik.frontend.entryPoints=https,http
-      - traefik.port=8000
+      - traefik.port=8080
 
   gogs:
     image: gogs/gogs
